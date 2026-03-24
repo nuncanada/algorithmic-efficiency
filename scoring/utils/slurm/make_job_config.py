@@ -67,7 +67,7 @@ WORKLOADS = {
   'librispeech_deepspeech': {'dataset': 'librispeech'},
   'criteo1tb': {'dataset': 'criteo1tb'},
   'librispeech_conformer': {'dataset': 'librispeech'},
-  'finewebedu_lm': {'dataset': 'fineweb_edu_10B'}
+  'finewebedu_lm': {'dataset': 'fineweb_edu_10B'},
 }
 
 RULESET_CONFIGS = {
@@ -92,7 +92,9 @@ def main(_):
 
   num_tuning_trials = FLAGS.num_tuning_trials
   if num_tuning_trials is None:
-    num_tuning_trials = RULESET_CONFIGS[FLAGS.tuning_ruleset]['num_tuning_trials']
+    num_tuning_trials = RULESET_CONFIGS[FLAGS.tuning_ruleset][
+      'num_tuning_trials'
+    ]
 
   key = jax.random.PRNGKey(FLAGS.seed)
 
