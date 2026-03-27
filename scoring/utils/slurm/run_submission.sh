@@ -18,6 +18,7 @@ SUBMISSION_NAME=""
 RULESET=""
 FRAMEWORK=""
 ARRAY_RANGE=""
+WORKLOADS=""
 
 # --- Helper Functions ---
 
@@ -85,6 +86,10 @@ parse_flags() {
         DRY_RUN="$2"
         shift 2
         ;;
+      --workloads)
+        WORKLOADS="$2"
+        shift 2
+        ;;
       *)
         echo "Unknown option $1"
         exit 1
@@ -143,6 +148,11 @@ generate_config() {
     exp_prefix="submissions_a100"
   fi
 
+  local workloads_flag=""
+  if [ -n "$WORKLOADS" ]; then
+    workloads_flag="--workloads=$WORKLOADS"
+  fi
+
   docker run \
     --rm \
     -v "$(pwd)":/algorithmic-efficiency \
@@ -153,7 +163,8 @@ generate_config() {
     --framework="$FRAMEWORK" \
     --tuning_ruleset="$RULESET" \
     --submission_path="$SUBMISSION_PATH/submission.py" \
-    --experiment_dir="${exp_prefix}/$SUBMISSION_NAME"
+    --experiment_dir="${exp_prefix}/$SUBMISSION_NAME" \
+    $workloads_flag
 
   mv config.json "$SUBMISSION_NAME.json"
 }
