@@ -250,3 +250,15 @@ class BaseWmtWorkload(spec.Workload):
       weights=mask_batch,
       label_smoothing=label_smoothing,
     )
+
+
+class WmtLowRankWorkload(BaseWmtWorkload):
+  """WMT Low-Rank Dynamic AttnRes workload."""
+
+  @property
+  def validation_target_value(self) -> float:
+    return 30.8491
+
+  @property
+  def test_target_value(self) -> float:
+    return 30.7219

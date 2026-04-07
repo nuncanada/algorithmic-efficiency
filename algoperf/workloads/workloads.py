@@ -147,6 +147,10 @@ WORKLOADS = {
     'workload_path': 'wmt/wmt',
     'workload_class_name': 'WmtWorkloadGLUTanH',
   },
+  'wmt_lowrank': {
+    'workload_path': 'wmt/wmt_lowrank/workload',
+    'workload_class_name': 'WmtLowRankWorkload',
+  },
 }
 
 BASE_WORKLOADS = [
