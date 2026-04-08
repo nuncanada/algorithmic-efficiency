@@ -27,3 +27,4 @@ scoring/plots/
 
 algoperf/_version.py
 log
+.venv/
