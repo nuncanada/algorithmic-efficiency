@@ -1,9 +1,10 @@
 """WMT Low-Rank Dynamic AttnRes workload implemented in PyTorch."""
 
+import torch
 import torch.nn.functional as F
 from algoperf import param_utils, pytorch_utils, spec
 from algoperf.workloads.wmt.wmt_pytorch.workload import WmtWorkload
-from algoperf.workloads.wmt.wmt_lowrank.models import TransformerLowRank
+from algoperf.workloads.wmt.wmt_lowrank_pytorch.models import TransformerLowRank
 
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_utils.pytorch_setup()
 

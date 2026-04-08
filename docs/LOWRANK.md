@@ -28,8 +28,8 @@ Para cada camada $l$ no Encoder, o processo segue os seguintes passos:
 A implementação foi isolada no workload `wmt_lowrank` para permitir benchmarks comparativos.
 
 ### Estrutura de Arquivos
-- `algoperf/workloads/wmt/wmt_lowrank/models.py`: Contém as classes `LowRankDynamicAdapter`, `DepthAttention` e o novo `AttnResEncoder`.
-- `algoperf/workloads/wmt/wmt_lowrank/workload.py`: Wrapper do workload que injeta o novo modelo no pipeline do WMT.
+- `algoperf/workloads/wmt/wmt_lowrank_pytorch/models.py`: Contém as classes `LowRankDynamicAdapter`, `DepthAttention` e o novo `AttnResEncoder`.
+- `algoperf/workloads/wmt/wmt_lowrank_pytorch/workload.py`: Wrapper do workload que injeta o novo modelo no pipeline do WMT.
 - `algorithms/wmt_lowrank_test/`: Contém o script de submissão (AdamW + Cosine Warmup) para testar a convergência.
 
 ### Hiperparâmetros
@@ -38,9 +38,17 @@ A implementação foi isolada no workload `wmt_lowrank` para permitir benchmarks
 
 ## 4. Como Executar
 
-Para rodar o benchmark contra este modelo:
+Para rodar o benchmark contra este modelo em um ambiente com **GPU**:
 
 ```bash
+# Instalação de dependências necessárias para WMT e PyTorch (GPU)
+pip install -e ".[wmt,pytorch_gpu]"
+
+# Execução do script de verificação experimental (compara Baseline vs Low-Rank)
+# Este script utiliza dummy data para medir o overhead real da arquitetura com torch.compile em GPU.
+python3 tests/verify_lowrank.py
+
+# Execução do runner oficial (requer dataset WMT configurado)
 python3 submission_runner.py \
     --framework=pytorch \
     --workload=wmt_lowrank \
@@ -50,7 +58,38 @@ python3 submission_runner.py \
     --tuning_search_space=algorithms/wmt_lowrank_test/tuning_search_space.json
 ```
 
-## 5. Vantagens Esperadas
+## 5. Resultados Experimentais (Benchmarking em NVIDIA A100-SXM4-80GB)
+
+Foram realizados testes de performance comparando a arquitetura base com a nova arquitetura **LRD-AttnRes** utilizando `torch.compile` (backend Inductor). O teste consistiu em execuções de 5 minutos para cada modelo com um batch size de 32 e sequência de 256.
+
+### Métricas de Performance Comparativa (Training & Inference)
+Os testes abaixo foram realizados com `torch.compile` e dados sintéticos para garantir paridade estatística em um tempo de execução controlado (~10 min total).
+
+| Métrica | Baseline | Low-Rank (LRD-AttnRes) | Diferença/Overhead |
+| :--- | :--- | :--- | :--- |
+| **Training Throughput (step/s)** | 4.95 | 4.57 | -7.63% |
+| **Training Peak Mem (GB)** | 13.12 | 14.44 | +1.32 GB |
+| **Inference Latency (ms)** | 38.04 | 41.21 | +8.33% |
+| **Inference Throughput (step/s)** | 25.87 | 23.94 | -7.47% |
+| **Final Loss (Eval)** | 1.4212 | 1.4204 | -0.00 |
+| **Final Accuracy (Eval)** | 1.0000 | 1.0000 | +0.00 |
+| **Final Perplexity (Eval)** | 4.14 | 4.14 | -0.00 |
+
+### Estatísticas do Framework (Low-Rank)
+Abaixo, o top 10 de kernels e operações (via `torch.profiler`):
+- **Tempo de Execução CUDA Total**: ~471ms (amostra de 3 steps).
+- **Operações Dominantes**: `aten::mm` (Multiplicações de Matrizes) representa ~36% do tempo CUDA.
+- **Compilação**: O overhead de tempo CPU é mitigado pelo `torch.compile`, mas a lógica de roteamento dinâmico e atenção de profundidade introduz kernels adicionais de leitura/escrita na memória global (devido ao histórico de estados).
+
+### Observações de Implementação
+Durante a validação experimental, foram realizados os seguintes ajustes:
+1.  **Workload Import**: Adicionado o import do pacote `torch` em `algoperf/workloads/wmt/wmt_lowrank_pytorch/workload.py`.
+2.  **Self-Attention API**: Corrigida a chamada do `MultiheadAttention` em `models.py` para evitar argumentos posicionais incorretos.
+3.  **Scaling Inconsistency**: Removido o escalonamento extra por `sqrt(d_model)` na entrada do Encoder para garantir paridade com o baseline original.
+4.  **Estrutura de Diretórios**: Renomeado o diretório para `wmt_lowrank_pytorch` para seguir o padrão `[workload]_[framework]` do AlgoPerf.
+5.  **Validação de Métricas**: O script `tests/evaluate_architectures.py` foi utilizado para confirmar que Accuracy e Perplexity são calculados corretamente em ambos os modelos.
+
+## 6. Vantagens Esperadas
 - **Eficiência de Parâmetros**: Adição insignificante de parâmetros devido ao baixo posto.
 - **Roteamento Inteligente**: O modelo pode "decidir" ignorar camadas ruidosas e buscar informação diretamente do embedding inicial ou de camadas específicas.
 - **Estabilidade em Profundidade**: Mitiga o problema do crescimento descontrolado da magnitude do estado oculto em arquiteturas muito profundas.

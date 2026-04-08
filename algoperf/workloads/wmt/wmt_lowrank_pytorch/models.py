@@ -64,9 +64,9 @@ class AttnResEncoderLayer(nn.Module):
 
     def forward(self, x: Tensor, history: list[Tensor], src_mask: Optional[Tensor] = None, dropout_rate: float = 0.0) -> Tensor:
         h_in = x
-        # Attention block - passing norm1(x) as query, key, and value
+        # Attention block
         x_norm = self.norm1(x)
-        attn_out, _ = self.self_attn(x_norm, x_norm, x_norm, attn_mask=src_mask, dropout_rate=dropout_rate)
+        attn_out, _ = self.self_attn(x_norm, attn_mask=src_mask, dropout_rate=dropout_rate)
         x = x + F.dropout(attn_out, p=dropout_rate, training=self.training)
         
         # FF block
@@ -125,7 +125,7 @@ class TransformerLowRank(nn.Module):
         # 1. Encoder path
         src = src.to(torch.int)
         src_mask = make_src_mask(src, inputs_segmentation, self.nhead)
-        src_emb = self.shared_embedding(src) * math.sqrt(self.shared_embedding.embedding_dim)
+        src_emb = self.shared_embedding(src)
         src_pos = self.pos_encoder(src_emb, inputs_positions, dropout_rate=dropout_rate)
         memory = self.encoder_body(src_pos, mask=src_mask, dropout_rate=dropout_rate)
         
